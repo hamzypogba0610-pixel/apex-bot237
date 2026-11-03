@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.nba_fetcher import get_stats_equipes  # On appelle notre bibliothécaire
+from src.nba_fetcher import get_stats_equipes
 
 app = FastAPI(title="APEX-BI")
 
@@ -11,9 +11,10 @@ def root():
 def healthz():
     return {"status": "ok"}
 
-# Nouvelle route pour voir les stats !
 @app.get("/stats-equipes")
 def stats_equipes():
-    # Le robot demande au bibliothécaire de ramener les stats
-    data = get_stats_equipes()
-    return {"equipes": data}
+    try:
+        data = get_stats_equipes()
+        return {"equipes": data}
+    except Exception as e:
+        return {"erreur_bot": str(e)}
