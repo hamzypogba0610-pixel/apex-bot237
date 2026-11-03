@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX-BI | Analyseur NBA</title>
+    <!-- La baguette magique pour le design -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        body { padding: 20px; }
+        .resultat-box { margin-top: 20px; padding: 20px; border-radius: 10px; background: #f4f4f5; color: #000; }
+        .parier { border-left: 5px solid green; background: #e6ffe6; }
+        .refus { border-left: 5px solid red; background: #ffe6e6; }
+        .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <hgroup>
+            <h1>🏀 APEX-BI</h1>
+            <p>Analyseur de paris NBA (Passes, Rebonds, Fautes)</p>
+        </hgroup>
+
+        <!-- Le Formulaire -->
+        <form id="formulaire">
+            <div class="grille">
+                <label>Équipe A
+                    <input type="text" id="equipe_A" value="Lakers" required>
+                </label>
+                <label>Équipe B
+                    <input type="text" id="equipe_B" value="Celtics" required>
+                </label>
+            </div>
+            
+            <label>Marché
+                <select id="marche">
+                    <option value="passes">Passes (Assists)</option>
+                    <option value="rebonds">Rebonds</option>
+                    <option value="fautes">Fautes</option>
+                </select>
+            </label>
+
+            <div class="grille">
+                <label>Ligne (Over/Under)
+                    <input type="number" step="0.5" id="ligne" value="52.5" required>
+                </label>
+                <label>Cote Over
+                    <input type="number" step="0.01" id="cote_over" value="1.90" required>
+                </label>
+                <label>Cote Under
+                    <input type="number" step="0.01" id="cote_under" value="1.90" required>
+                </label>
+            </div>
+
+            <button type="submit" id="btn-analyser">Analyser le match</button>
+        </form>
+
+        <!-- La zone où s'affichera le résultat -->
+        <div id="resultat" style="display:none;"></div>
+    </main>
+
+    <!-- Le petit script qui fait parler la page avec le robot -->
+    <script>
+        document.getElementById('formulaire').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Empêche la page de se recharger
+            
+            const btn = document.getElementById('btn-analyser');
+            btn.setAttribute('aria-busy', 'true'); // Fait tourner le bouton
+            btn.innerText = "Calcul en cours...";
+
+            // On prépare les données
+            const donnees = {
+                equipe_A: document.getElementById('equipe_A').value,
+                equipe_B: document.getElementById('equipe_B').value,
+                marche: document.getElementById('marche').value,
+                ligne: parseFloat(document.getElementById('ligne').value),
+                cote_over: parseFloat(document.getElementById('cote_over').value),
+                cote_under: parseFloat(document.getElementById('cote_under').value)
+            };
+
+            try {
+                // On envoie au robot
+                const reponse = await fetch('/analyser', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(donnees)
+                });
+                
+                const data = await reponse.json();
+                const divResultat = document.getElementById('resultat');
+                
+                if (reponse.ok) {
+                    const decision = data.decision_financiere.decision;
+                    const classeCss = decision.includes('PARIER') ? 'parier' : 'refus';
+                    
+                    divResultat.className = `resultat-box ${classeCss}`;
+                    divResultat.innerHTML = `
+                        <h3>${data.match}</h3>
+                        <p>Total attendu par le modèle : <strong>${data.analyse_sportive.total_attendu}</strong></p>
+                        <hr>
+                        <h4>Décision : ${decision}</h4>
+                        <p>Probabilité du modèle (Over) : ${(data.decision_financiere.p_over_modele * 100).toFixed(1)}%</p>
+                        <p>Valeur Espérée (EV) : ${(data.decision_financiere.ev_choisie * 100).toFixed(1)}%</p>
+                    `;
+                    divResultat.style.display = 'block';
+                } else {
+                    alert("Erreur : " + data.detail);
+                }
+            } catch (error) {
+                alert("Erreur de connexion au serveur.");
+            } finally {
+                btn.removeAttribute('aria-busy');
+                btn.innerText = "Analyser le match";
+            }
+        });
+    </script>
+</body>
+                      </html>
