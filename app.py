@@ -1,23 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from src.nba_fetcher import get_stats_equipes
+from src.models.baseline import analyser_match
 
 app = FastAPI(title="APEX-BI")
 
-# 1. On prépare la forme de la lettre (ce que tu vas nous envoyer)
-class CoteSaisie(BaseModel):
-    nom_match: str
+class MatchDemande(BaseModel):
+    equipe_A: str
+    equipe_B: str
     marche: str
     ligne: float
-    cote_over: float
-    cote_under: float
-
-# Une petite mémoire temporaire pour stocker tes cotes
-memoire_cotes = []
 
 @app.get("/")
 def root():
-    return {"message": "APEX-BI bot is alive", "version": "0.1.0"}
+    return {"message": "APEX-BI bot is alive", "version": "0.2.0"}
 
 @app.get("/healthz")
 def healthz():
@@ -25,22 +21,25 @@ def healthz():
 
 @app.get("/stats-equipes")
 def stats_equipes():
-    data = get_stats_equipes()
-    return {"equipes": data}
+    return {"equipes": get_stats_equipes()}
 
-# 2. LA BOÎTE AUX LETTRES (La fameuse route POST)
-@app.post("/ajouter-cote")
-def ajouter_cote(cote: CoteSaisie):
-    # On range la lettre dans la mémoire
-    nouvelle_cote = cote.model_dump() # On transforme la lettre en dictionnaire
-    memoire_cotes.append(nouvelle_cote)
+@app.post("/analyser")
+def analyser(demande: MatchDemande):
+    # 1. On va chercher les stats de toutes les équipes
+    stats = get_stats_equipes()
+    
+    # 2. On cherche les deux équipes demandées (recherche simplifiée)
+    stats_A = next((e for e in stats if demande.equipe_A.lower() in e["equipe"].lower()), None)
+    stats_B = next((e for e in stats if demande.equipe_B.lower() in e["equipe"].lower()), None)
+
+    if not stats_A or not stats_B:
+        raise HTTPException(status_code=404, detail="Équipe non trouvée. Vérifie l'orthographe (ex: 'Lakers', 'Celtics').")
+    
+    # 3. On demande au cerveau de faire le calcul
+    resultat = analyser_match(stats_A, stats_B, demande.marche, demande.ligne)
+    
     return {
-        "message": "Cote bien reçue !", 
-        "cote_enregistree": nouvelle_cote,
-        "total_cotes_en_memoire": len(memoire_cotes)
-    }
-
-# 3. Pour vérifier que tes lettres sont bien arrivées
-@app.get("/voir-cotes")
-def voir_cotes():
-    return {"toutes_les_cotes": memoire_cotes}
+        "match": f"{stats_A['equipe']} vs {stats_B['equipe']}",
+        "marche": demande.marche,
+        "analyse": resultat
+}
