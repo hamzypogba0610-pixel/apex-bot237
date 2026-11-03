@@ -2,31 +2,45 @@ import requests
 
 def get_stats_equipes():
     try:
-        # On va chercher le grand tableau des classements de la NBA
-        url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings"
+        # 1. On récupère la liste des équipes (avec leur ID secret)
+        url_teams = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams"
+        response_teams = requests.get(url_teams, timeout=20)
+        response_teams.raise_for_status()
         
-        response = requests.get(url, timeout=20)
-        response.raise_for_status() 
+        equipes_brutes = response_teams.json().get("sports", [{}])[0].get("leagues", [{}])[0].get("teams", [])
         
-        data = response.json()
+        resultats = []
         
-        equipes = []
-        # On fouille dans les données pour trouver les stats de chaque équipe
-        for conference in data.get("children", []):
-            for entry in conference.get("standings", {}).get("entries", []):
-                nom = entry.get("team", {}).get("displayName")
-                
-                # Les stats sont cachées dans une liste, on les range dans un dictionnaire
-                stats_brutes = entry.get("stats", [])
-                stats_dict = {stat["name"]: stat["value"] for stat in stats_brutes}
-                
-                equipes.append({
-                    "equipe": nom,
-                    "passes_par_match": stats_dict.get("avgAssists", 0),
-                    "rebonds_par_match": stats_dict.get("avgRebounds", 0),
-                    "fautes_par_match": stats_dict.get("avgFouls", 0)
-                })
+        # 2. Pour chaque équipe, on va chercher ses stats
+        for equipe in equipes_brutes:
+            infos = equipe.get("team", {})
+            team_id = infos.get("id")
+            nom_equipe = infos.get("displayName")
             
-        return equipes
+            # On demande les stats de la saison en cours (season=2025)
+            url_stats = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/statistics?season=2025"
+            response_stats = requests.get(url_stats, timeout=10)
+            
+            # Si on a bien les stats, on les range
+            if response_stats.status_code == 200:
+                data_stats = response_stats.json()
+                # On fouille dans les catégories "general" et "offensive" pour trouver nos chiffres
+                stats_list = []
+                for categorie in data_stats.get("results", {}).get("stats", {}).get("categories", []):
+                    stats_list.extend(categorie.get("stats", []))
+                
+                # On transforme la liste en dictionnaire facile à lire
+                stats_dict = {stat["name"]: stat["value"] for stat in stats_list}
+                
+                resultats.append({
+                    "equipe": nom_equipe,
+                    "passes_par_match": round(stats_dict.get("avgAssists", 0), 1),
+                    "rebonds_par_match": round(stats_dict.get("avgRebounds", 0), 1),
+                    "fautes_par_match": round(stats_dict.get("avgFouls", 0), 1)
+                })
+            else:
+                resultats.append({"equipe": nom_equipe, "erreur": "Stats indisponibles"})
+                
+        return resultats
     except Exception as e:
         return {"erreur_espn": str(e)}
