@@ -1,10 +1,14 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from src.nba_fetcher import get_stats_equipes
 from src.models.baseline import analyser_match
 from src.decision.edge import prendre_decision
 
 app = FastAPI(title="APEX-BI")
+
+# On prépare l'outil pour lire le HTML
+templates = Jinja2Templates(directory="templates")
 
 class MatchDemande(BaseModel):
     equipe_A: str
@@ -14,9 +18,10 @@ class MatchDemande(BaseModel):
     cote_over: float
     cote_under: float
 
+# LA PAGE D'ACCUEIL (Affiche le HTML)
 @app.get("/")
-def root():
-    return {"message": "APEX-BI bot is alive", "version": "0.3.0"}
+def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/healthz")
 def healthz():
@@ -29,17 +34,13 @@ def stats_equipes():
 @app.post("/analyser")
 def analyser(demande: MatchDemande):
     stats = get_stats_equipes()
-    
     stats_A = next((e for e in stats if demande.equipe_A.lower() in e["equipe"].lower()), None)
     stats_B = next((e for e in stats if demande.equipe_B.lower() in e["equipe"].lower()), None)
 
     if not stats_A or not stats_B:
         raise HTTPException(status_code=404, detail="Équipe non trouvée.")
     
-    # 1. Le calcul basique
     analyse_sportive = analyser_match(stats_A, stats_B, demande.marche, demande.ligne)
-    
-    # 2. Le calcul financier (le banquier)
     decision_financiere = prendre_decision(
         total_attendu=analyse_sportive["total_attendu"],
         ligne=demande.ligne,
