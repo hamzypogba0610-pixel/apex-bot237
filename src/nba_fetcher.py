@@ -2,12 +2,23 @@ from nba_api.stats.endpoints import leaguedashteamstats
 
 def get_stats_equipes(saison="2023-24"):
     try:
-        # Le bibliothécaire demande les stats avec une limite de temps (timeout)
+        # On crée une fausse identité de navigateur web
+        custom_headers = {
+            'Host': 'stats.nba.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',
+            'Referer': 'https://www.nba.com/'
+        }
+
+        # On demande les stats en utilisant cette fausse identité
         stats = leaguedashteamstats.LeagueDashTeamStats(
             season=saison,
             per_mode_detailed='PerGame', 
             measure_type_detailed_defense='Base',
-            timeout=30  # On donne 30 secondes au serveur NBA pour répondre
+            timeout=30,          # On garde 30s de limite
+            headers=custom_headers # On glisse la fausse carte d'identité ici
         )
         data = stats.get_data_frames()[0]
         
@@ -16,5 +27,4 @@ def get_stats_equipes(saison="2023-24"):
         
         return resultat
     except Exception as e:
-        # Si ça plante, on renvoie le vrai message d'erreur
         return {"erreur_nba": str(e)}
