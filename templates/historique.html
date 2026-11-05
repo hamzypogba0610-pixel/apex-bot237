@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique | APEX-BI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        body { padding: 20px; }
+        .badge-parier { background-color: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
+        .badge-refus { background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
+        table { font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <nav style="margin-bottom: 20px;">
+            <ul>
+                <li><strong>📖 Historique des analyses</strong></li>
+            </ul>
+            <ul>
+                <li><a href="/" role="button" class="outline">⬅️ Retour à l'analyse</a></li>
+            </ul>
+        </nav>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Match</th>
+                        <th>Marché</th>
+                        <th>Ligne</th>
+                        <th>Total Modèle</th>
+                        <th>Décision</th>
+                        <th>EV</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pari in paris %}
+                    <tr>
+                        <td>{{ pari.date_creation[:10] }}</td> <!-- Affiche juste la date -->
+                        <td>{{ pari.match }}</td>
+                        <td>{{ pari.marche }}</td>
+                        <td>{{ pari.ligne }}</td>
+                        <td>{{ pari.total_attendu }}</td>
+                        <td>
+                            {% if 'PARIER' in pari.decision %}
+                                <span class="badge-parier">{{ pari.decision }}</span>
+                            {% else %}
+                                <span class="badge-refus">{{ pari.decision }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ (pari.ev * 100) | round(1) }}%</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center;">Aucun pari pour le moment. Fais ton premier pari !</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+  </html>
