@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from src.nba_fetcher import get_stats_equipe
 from src.models.baseline import analyser_match
 from src.decision.edge import prendre_decision
-from src.database import sauvegarder_analyse, lire_historique # NOUVEAU
+from src.database import sauvegarder_analyse, lire_historique
 
 app = FastAPI(title="APEX-BI")
 templates = Jinja2Templates(directory="templates")
@@ -16,12 +16,12 @@ class MatchDemande(BaseModel):
     ligne: float
     cote_over: float
     cote_under: float
+    avantage_terrain: str # NOUVEAU
 
 @app.get("/")
 def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# NOUVELLE ROUTE
 @app.get("/historique")
 def page_historique(request: Request):
     paris = lire_historique()
@@ -40,7 +40,11 @@ def analyser(demande: MatchDemande):
         if not stats_A or not stats_B or "erreur" in stats_A or "erreur" in stats_B:
             raise HTTPException(status_code=404, detail="Équipe non trouvée.")
         
-        analyse_sportive = analyser_match(stats_A, stats_B, demande.marche, demande.ligne)
+        # On passe l'avantage du terrain au cerveau
+        analyse_sportive = analyser_match(
+            stats_A, stats_B, demande.marche, demande.ligne, demande.avantage_terrain
+        )
+        
         decision_financiere = prendre_decision(
             total_attendu=analyse_sportive["total_attendu"],
             ligne=demande.ligne,
