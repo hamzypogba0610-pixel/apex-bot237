@@ -10,16 +10,22 @@
         .badge-parier { background-color: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
         .badge-refus { background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
         table { font-size: 0.9em; }
+        
+        /* C'est ici qu'on plie l'affiche pour le téléphone */
+        @media (max-width: 600px) {
+            th, td { padding: 4px; font-size: 0.8em; }
+            .cache-telephone { display: none; } 
+        }
     </style>
 </head>
 <body>
     <main class="container">
         <nav style="margin-bottom: 20px;">
             <ul>
-                <li><strong>📖 Historique des analyses</strong></li>
+                <li><strong>📖 Historique</strong></li>
             </ul>
             <ul>
-                <li><a href="/" role="button" class="outline">⬅️ Retour à l'analyse</a></li>
+                <li><a href="/" role="button" class="outline">⬅️ Retour</a></li>
             </ul>
         </nav>
 
@@ -27,11 +33,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th class="cache-telephone">Date</th>
                         <th>Match</th>
-                        <th>Marché</th>
+                        <th class="cache-telephone">Marché</th>
                         <th>Ligne</th>
-                        <th>Total Modèle</th>
+                        <th>Total</th>
                         <th>Décision</th>
                         <th>EV</th>
                     </tr>
@@ -39,9 +45,9 @@
                 <tbody>
                     {% for pari in paris %}
                     <tr>
-                        <td>{{ pari.date_creation[:10] }}</td> <!-- Affiche juste la date -->
+                        <td class="cache-telephone">{{ pari.date_creation[:10] }}</td>
                         <td>{{ pari.match }}</td>
-                        <td>{{ pari.marche }}</td>
+                        <td class="cache-telephone">{{ pari.marche }}</td>
                         <td>{{ pari.ligne }}</td>
                         <td>{{ pari.total_attendu }}</td>
                         <td>
@@ -55,7 +61,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" style="text-align: center;">Aucun pari pour le moment. Fais ton premier pari !</td>
+                        <td colspan="7" style="text-align: center;">Aucun pari pour le moment.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -63,4 +69,4 @@
         </div>
     </main>
 </body>
-  </html>
+</html>
