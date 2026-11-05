@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APEX-BI | Analyseur NBA</title>
-    <!-- Pico.css pour un design propre -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         body { padding: 20px; }
-        
-        /* Le conteneur principal du résultat (style carte pro) */
         .carte-resultat {
             margin-top: 30px;
             padding: 20px;
@@ -19,14 +16,10 @@
             border: 1px solid var(--pico-card-border-color);
             animation: apparition 0.4s ease-out;
         }
-
-        /* Animation d'apparition */
         @keyframes apparition {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* Les badges de décision */
         .badge {
             display: inline-block;
             padding: 6px 12px;
@@ -36,18 +29,8 @@
             letter-spacing: 0.5px;
             text-transform: uppercase;
         }
-        
-        .badge-parier {
-            background-color: #10b981; /* Vert émeraude pro */
-            color: white;
-        }
-        
-        .badge-refus {
-            background-color: #ef4444; /* Rouge vif pro */
-            color: white;
-        }
-
-        /* Grille pour aligner les chiffres proprement */
+        .badge-parier { background-color: #10b981; color: white; }
+        .badge-refus { background-color: #ef4444; color: white; }
         .grille-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -58,18 +41,8 @@
             padding: 15px;
             border-radius: 8px;
         }
-
-        .grille-stats small {
-            color: var(--pico-muted-color);
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .grille-stats strong {
-            font-size: 1.2em;
-        }
-
-        /* Ajustement pour mobile */
+        .grille-stats small { color: var(--pico-muted-color); display: block; margin-bottom: 5px; }
+        .grille-stats strong { font-size: 1.2em; }
         @media (max-width: 600px) {
             .grille-stats { grid-template-columns: 1fr; gap: 10px; }
         }
@@ -78,19 +51,14 @@
 <body>
     <main class="container">
         <nav style="margin-bottom: 20px;">
-    <ul>
-        <li><strong>🏀 APEX-BI</strong></li>
-    </ul>
-    <ul>
-        <li><a href="/historique" role="button" class="outline">Voir l'historique 📖</a></li>
-    </ul>
+            <ul>
+                <li><strong>🏀 APEX-BI</strong></li>
+            </ul>
+            <ul>
+                <li><a href="/historique" role="button" class="outline">Voir l'historique 📖</a></li>
+            </ul>
         </nav>
-        <hgroup style="text-align: center; margin-bottom: 30px;">
-            <h1>🏀 APEX-BI</h1>
-            <p>Moteur d'analyse NBA (Passes, Rebonds, Fautes)</p>
-        </hgroup>
 
-        <!-- Le Formulaire -->
         <form id="formulaire">
             <div class="grid">
                 <label>Équipe A
@@ -108,6 +76,8 @@
                     <option value="fautes">Fautes</option>
                 </select>
             </label>
+
+            <!-- LE NOUVEAU MENU EST ICI -->
             <label>Avantage du terrain
                 <select id="avantage_terrain">
                     <option value="neutre">Terrain Neutre</option>
@@ -131,11 +101,9 @@
             <button type="submit" id="btn-analyser">Analyser le match</button>
         </form>
 
-        <!-- La zone de résultat (cachée au début) -->
         <div id="resultat" style="display:none;"></div>
     </main>
 
-    <!-- Le script de communication -->
     <script>
         document.getElementById('formulaire').addEventListener('submit', async (e) => {
             e.preventDefault(); 
@@ -144,10 +112,12 @@
             btn.setAttribute('aria-busy', 'true'); 
             btn.innerText = "Analyse en cours...";
 
+            // C'EST ICI QUE LA LIGNE MAGIQUE SE TROUVE
             const donnees = {
                 equipe_A: document.getElementById('equipe_A').value,
                 equipe_B: document.getElementById('equipe_B').value,
                 marche: document.getElementById('marche').value,
+                avantage_terrain: document.getElementById('avantage_terrain').value, // <--- La voici !
                 ligne: parseFloat(document.getElementById('ligne').value),
                 cote_over: parseFloat(document.getElementById('cote_over').value),
                 cote_under: parseFloat(document.getElementById('cote_under').value)
@@ -165,17 +135,14 @@
                 
                 if (reponse.ok) {
                     const decision = data.decision_financiere.decision;
-                    // On choisit le badge selon la décision
                     const badgeCss = decision.includes('PARIER') ? 'badge-parier' : 'badge-refus';
                     
-                    // On construit une belle carte HTML
                     divResultat.innerHTML = `
                         <article class="carte-resultat">
                             <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <h3 style="margin: 0;">${data.match}</h3>
                                 <span class="badge ${badgeCss}">${decision}</span>
                             </header>
-                            
                             <div class="grille-stats">
                                 <div>
                                     <small>Total attendu</small>
