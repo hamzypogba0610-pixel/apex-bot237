@@ -12,9 +12,7 @@ def get_supabase() -> Client:
 def sauvegarder_analyse(data_analyse):
     supabase = get_supabase()
     if not supabase:
-        print("Attention: Pas de base de données connectée.")
         return False
-    
     try:
         nouvelle_ligne = {
             "match": data_analyse["match"],
@@ -27,5 +25,18 @@ def sauvegarder_analyse(data_analyse):
         supabase.table("historique_paris").insert(nouvelle_ligne).execute()
         return True
     except Exception as e:
-        print(f"Erreur d'écriture dans la base : {e}")
+        print(f"Erreur d'écriture : {e}")
         return False
+
+# NOUVEAU : Fonction pour lire l'historique
+def lire_historique():
+    supabase = get_supabase()
+    if not supabase:
+        return []
+    try:
+        # On demande les 50 derniers paris, du plus récent au plus ancien
+        reponse = supabase.table("historique_paris").select("*").order("date_creation", desc=True).limit(50).execute()
+        return reponse.data
+    except Exception as e:
+        print(f"Erreur de lecture : {e}")
+        return []
