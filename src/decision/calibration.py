@@ -20,16 +20,19 @@ class CalibrateurAPEX:
         p_calibree = self.modele.predict(p_array)[0]
         return float(np.clip(p_calibree, 0.0, 1.0))
 
-    # NOUVEAU : Récupérer les paramètres pour les sauvegarder
+    # CORRECTION : On va chercher les paramètres dans 'map_'
     def get_parametres(self):
         if not self.est_entraine:
             return None
-        return float(self.modele.a_[0]), float(self.modele.b_[0]), float(self.modele.m_[0])
+        # map_ est une liste [a, b, m]. 
+        # Si un paramètre n'a pas été ajusté (car mis à None), on le remplace par 0 pour la sauvegarde.
+        a = self.modele.map_[0] if self.modele.map_[0] is not None else 0.0
+        b = self.modele.map_[1] if self.modele.map_[1] is not None else 0.0
+        m = self.modele.map_[2] if self.modele.map_[2] is not None else 0.0
+        return float(a), float(b), float(m)
 
-    # NOUVEAU : Recharger les paramètres appris
+    # CORRECTION : On restaure en recréant le tiroir 'map_'
     def restaurer(self, param_a, param_b, param_m):
-        self.modele.a_ = np.array([param_a])
-        self.modele.b_ = np.array([param_b])
-        self.modele.m_ = np.array([param_m])
+        self.modele.map_ = [param_a, param_b, param_m]
         self.est_entraine = True
         print("Calibrateur restauré depuis la mémoire.")
