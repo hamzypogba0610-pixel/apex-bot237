@@ -8,7 +8,8 @@ from src.decision.edge import prendre_decision
 from src.decision.calibration import CalibrateurAPEX
 from src.database import (
     sauvegarder_analyse, lire_historique, mettre_a_jour_resultat,
-    recuperer_donnees_calibration, sauvegarder_parametres_calibration, charger_parametres_calibration
+    recuperer_donnees_calibration, sauvegarder_parametres_calibration, charger_parametres_calibration,
+    mettre_a_jour_cloture # NOUVEAU
 )
 from src.backtest import lancer_backtest_saison
 
@@ -23,8 +24,6 @@ def startup_event():
     if objet_modele:
         calibrateur.restaurer_objet(objet_modele)
         print("Cerveau du robot rechargé avec succès depuis Supabase !")
-    else:
-        print("Aucun cerveau sauvegardé trouvé. Le robot est un nouveau-né.")
 
 class MatchDemande(BaseModel):
     equipe_A: str
@@ -63,8 +62,6 @@ def analyser(demande: MatchDemande):
 
         decision_financiere = prendre_decision(p_over_calibre, p_under_calibre, demande.cote_over, demande.cote_under)
 
-        # --- NOUVEAU : Calcul des cotes justes ---
-        # La cote juste, c'est 1 divisé par la probabilité (ex: 1 / 0.60 = 1.66)
         cote_juste_over = 1 / p_over_calibre if p_over_calibre > 0 else 0
         cote_juste_under = 1 / p_under_calibre if p_under_calibre > 0 else 0
 
@@ -77,7 +74,9 @@ def analyser(demande: MatchDemande):
                 "cote_juste_over": round(cote_juste_over, 2),
                 "cote_juste_under": round(cote_juste_under, 2)
             },
-            "decision_financiere": decision_financiere
+            "decision_financiere": decision_financiere,
+            "cote_over_saisie": demande.cote_over, # NOUVEAU
+            "cote_under_saisie": demande.cote_under # NOUVEAU
         }
         sauvegarder_analyse(resultat_final)
         return resultat_final
@@ -87,6 +86,13 @@ def analyser(demande: MatchDemande):
 @app.post("/api/noter-resultat/{id_pari}/{resultat}")
 def noter_resultat(id_pari: int, resultat: int):
     succes = mettre_a_jour_resultat(id_pari, resultat)
+    if succes: return {"status": "ok"}
+    raise HTTPException(status_code=500, detail="Erreur.")
+
+# NOUVELLE ROUTE : Enregistrer la clôture
+@app.post("/api/noter-cloture/{id_pari}")
+def noter_cloture(id_pari: int, cote_over: float, cote_under: float):
+    succes = mettre_a_jour_cloture(id_pari, cote_over, cote_under)
     if succes: return {"status": "ok"}
     raise HTTPException(status_code=500, detail="Erreur.")
 
@@ -114,13 +120,3 @@ def backtest():
         return resultat
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Ajoute mettre_a_jour_cloture dans l'import de src.database
-from src.database import ..., mettre_a_jour_cloture
-
-# Ajoute cette route à la fin de app.py
-@app.post("/api/noter-cloture/{id_pari}")
-def noter_cloture(id_pari: int, cote_over: float, cote_under: float):
-    succes = mettre_a_jour_cloture(id_pari, cote_over, cote_under)
-    if succes: return {"status": "ok"}
-    raise HTTPException(status_code=500, detail="Erreur.")
