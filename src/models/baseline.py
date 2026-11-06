@@ -11,31 +11,34 @@ def analyser_match_simulation(stats_equipe_A, stats_equipe_B, marche, ligne, ava
     else:
         return {"erreur": "Marché inconnu."}
 
-    # 2. On calcule la moyenne attendue
+    # 2. On récupère les moyennes de base
     moyenne_A = stats_equipe_A[cle]
     moyenne_B = stats_equipe_B[cle]
-    moyenne_totale = moyenne_A + moyenne_B
 
-    # 3. On applique l'avantage du terrain
-    if avantage_terrain in ["domicile_A", "domicile_B"]:
-        moyenne_totale = moyenne_totale * 1.03
+    # 3. L'avantage du terrain (On booste l'équipe à la maison, on pénalise un peu le voyageur)
+    if avantage_terrain == "domicile_A":
+        moyenne_A *= 1.03
+        moyenne_B *= 0.98 
+    elif avantage_terrain == "domicile_B":
+        moyenne_A *= 0.98
+        moyenne_B *= 1.03
 
-    # 4. LA MAGIE MONTE-CARLO : On simule 10 000 matchs
-    # On estime que la "variance" (le désordre) est d'environ 10% de la moyenne.
-    # C'est comme ça que les pros modélisent l'incertitude d'un match.
-    ecart_type = moyenne_totale * 0.10
-    
-    # Le robot crée 10 000 résultats de matchs possibles (loi normale)
-    simulations = np.random.normal(loc=moyenne_totale, scale=ecart_type, size=n_simulations)
+    # 4. LA FORMULE MAGIQUE (Loi de Poisson)
+    # Le robot simule 10 000 matchs pour l'équipe A, et 10 000 pour l'équipe B
+    simulations_A = np.random.poisson(lam=moyenne_A, size=n_simulations)
+    simulations_B = np.random.poisson(lam=moyenne_B, size=n_simulations)
 
-    # 5. On compte combien de fois la simulation dépasse la ligne
-    over_reussis = np.sum(simulations > ligne)
+    # 5. On additionne les deux pour avoir le total du match
+    simulations_totales = simulations_A + simulations_B
+
+    # 6. On calcule la moyenne de nos simulations et on compte les Over
+    moyenne_totale = np.mean(simulations_totales)
+    over_reussis = np.sum(simulations_totales > ligne)
     p_over = over_reussis / n_simulations
-    p_under = 1 - p_over
 
     return {
         "total_attendu": round(moyenne_totale, 1),
         "p_over_modele": round(p_over, 4),
-        "p_under_modele": round(p_under, 4),
+        "p_under_modele": round(1 - p_over, 4),
         "ligne": ligne
     }
