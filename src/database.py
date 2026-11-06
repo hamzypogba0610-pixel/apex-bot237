@@ -21,7 +21,9 @@ def sauvegarder_analyse(data_analyse):
             "total_attendu": data_analyse["analyse_sportive"]["total_attendu"],
             "ligne": data_analyse["analyse_sportive"]["ligne"],
             "decision": data_analyse["decision_financiere"]["decision"],
-            "ev": data_analyse["decision_financiere"]["ev_choisie"]
+            "ev": data_analyse["decision_financiere"]["ev_choisie"],
+            "cote_over": data_analyse.get("cote_over_saisie"), # NOUVEAU
+            "cote_under": data_analyse.get("cote_under_saisie") # NOUVEAU
         }
         supabase.table("historique_paris").insert(nouvelle_ligne).execute()
         return True
@@ -34,7 +36,19 @@ def lire_historique():
     if not supabase: return []
     try:
         reponse = supabase.table("historique_paris").select("*").order("date_creation", desc=True).limit(50).execute()
-        return reponse.data
+        paris = reponse.data
+        
+        # --- CALCUL DE LA CLV POUR CHAQUE PARI ---
+        for pari in paris:
+            pari["clv"] = None
+            if pari.get("cote_cloture_over") and pari.get("cote_over"):
+                if "OVER" in pari["decision"]:
+                    # CLV = (Cote prise / Cote clôture) - 1
+                    pari["clv"] = (pari["cote_over"] / pari["cote_cloture_over"]) - 1
+                elif "UNDER" in pari["decision"]:
+                    pari["clv"] = (pari["cote_under"] / pari["cote_cloture_under"]) - 1
+                    
+        return paris
     except Exception as e:
         print(f"Erreur de lecture : {e}")
         return []
@@ -47,6 +61,20 @@ def mettre_a_jour_resultat(id_pari, resultat):
         return True
     except Exception as e:
         print(f"Erreur de mise à jour : {e}")
+        return False
+
+# NOUVEAU : Mettre à jour les cotes de clôture
+def mettre_a_jour_cloture(id_pari, cote_over_cloture, cote_under_cloture):
+    supabase = get_supabase()
+    if not supabase: return False
+    try:
+        supabase.table("historique_paris").update({
+            "cote_cloture_over": cote_over_cloture,
+            "cote_cloture_under": cote_under_cloture
+        }).eq("id", id_pari).execute()
+        return True
+    except Exception as e:
+        print(f"Erreur mise à jour clôture : {e}")
         return False
 
 def recuperer_donnees_calibration():
@@ -65,14 +93,11 @@ def recuperer_donnees_calibration():
         print(f"Erreur de récupération : {e}")
         return [], []
 
-# NOUVEAU : Sauvegarder l'objet entier en base64
 def sauvegarder_parametres_calibration(objet_modele):
     supabase = get_supabase()
     if not supabase: return False
     try:
-        # On transforme l'objet Python en texte (pickle) puis en texte lisible (base64)
         objet_serialise = base64.b64encode(pickle.dumps(objet_modele)).decode('utf-8')
-        
         data = {"id": 1, "parametres_serialises": objet_serialise}
         supabase.table("calibration_params").upsert(data).execute()
         return True
@@ -80,14 +105,12 @@ def sauvegarder_parametres_calibration(objet_modele):
         print(f"Erreur sauvegarde cerveau : {e}")
         return False
 
-# NOUVEAU : Charger l'objet entier
 def charger_parametres_calibration():
     supabase = get_supabase()
     if not supabase: return None
     try:
         reponse = supabase.table("calibration_params").select("*").eq("id", 1).execute()
         if reponse.data and reponse.data[0].get("parametres_serialises"):
-            # On décode le texte pour retrouver l'objet Python
             objet_serialise = reponse.data[0]["parametres_serialises"]
             objet_modele = pickle.loads(base64.b64decode(objet_serialise.encode('utf-8')))
             return objet_modele
@@ -95,16 +118,3 @@ def charger_parametres_calibration():
     except Exception as e:
         print(f"Erreur chargement cerveau : {e}")
         return None
-
-def mettre_a_jour_cloture(id_pari, cote_over_cloture, cote_under_cloture):
-    supabase = get_supabase()
-    if not supabase: return False
-    try:
-        supabase.table("historique_paris").update({
-            "cote_cloture_over": cote_over_cloture,
-            "cote_cloture_under": cote_under_cloture
-        }).eq("id", id_pari).execute()
-        return True
-    except Exception as e:
-        print(f"Erreur mise à jour clôture : {e}")
-        return False
