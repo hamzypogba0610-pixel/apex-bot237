@@ -114,3 +114,13 @@ def backtest():
         return resultat
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Ajoute mettre_a_jour_cloture dans l'import de src.database
+from src.database import ..., mettre_a_jour_cloture
+
+# Ajoute cette route à la fin de app.py
+@app.post("/api/noter-cloture/{id_pari}")
+def noter_cloture(id_pari: int, cote_over: float, cote_under: float):
+    succes = mettre_a_jour_cloture(id_pari, cote_over, cote_under)
+    if succes: return {"status": "ok"}
+    raise HTTPException(status_code=500, detail="Erreur.")
