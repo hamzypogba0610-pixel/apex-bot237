@@ -95,3 +95,16 @@ def charger_parametres_calibration():
     except Exception as e:
         print(f"Erreur chargement cerveau : {e}")
         return None
+
+def mettre_a_jour_cloture(id_pari, cote_over_cloture, cote_under_cloture):
+    supabase = get_supabase()
+    if not supabase: return False
+    try:
+        supabase.table("historique_paris").update({
+            "cote_cloture_over": cote_over_cloture,
+            "cote_cloture_under": cote_under_cloture
+        }).eq("id", id_pari).execute()
+        return True
+    except Exception as e:
+        print(f"Erreur mise à jour clôture : {e}")
+        return False
