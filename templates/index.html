@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APEX-BI | MAGIE</title>
+    <title>APEX-BI | Analyseur NBA</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         body { padding: 20px; }
@@ -43,6 +43,17 @@
         }
         .grille-stats small { color: var(--pico-muted-color); display: block; margin-bottom: 5px; }
         .grille-stats strong { font-size: 1.2em; }
+        
+        .zone-cotes-justes {
+            margin-top: 15px; 
+            text-align: center; 
+            font-size: 0.95em; 
+            background: rgba(16, 185, 129, 0.1); 
+            padding: 12px; 
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
         @media (max-width: 600px) {
             .grille-stats { grid-template-columns: 1fr; gap: 10px; }
         }
@@ -77,7 +88,6 @@
                 </select>
             </label>
 
-            <!-- LE NOUVEAU MENU EST ICI -->
             <label>Avantage du terrain
                 <select id="avantage_terrain">
                     <option value="neutre">Terrain Neutre</option>
@@ -112,12 +122,11 @@
             btn.setAttribute('aria-busy', 'true'); 
             btn.innerText = "Analyse en cours...";
 
-            // C'EST ICI QUE LA LIGNE MAGIQUE SE TROUVE
             const donnees = {
                 equipe_A: document.getElementById('equipe_A').value,
                 equipe_B: document.getElementById('equipe_B').value,
                 marche: document.getElementById('marche').value,
-                avantage_terrain: document.getElementById('avantage_terrain').value, // <--- La voici !
+                avantage_terrain: document.getElementById('avantage_terrain').value,
                 ligne: parseFloat(document.getElementById('ligne').value),
                 cote_over: parseFloat(document.getElementById('cote_over').value),
                 cote_under: parseFloat(document.getElementById('cote_under').value)
@@ -137,29 +146,31 @@
                     const decision = data.decision_financiere.decision;
                     const badgeCss = decision.includes('PARIER') ? 'badge-parier' : 'badge-refus';
                     
-                    divResultat.innerHTML = `
-                        <article class="carte-resultat">
-                            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h3 style="margin: 0;">${data.match}</h3>
-                                <span class="badge ${badgeCss}">${decision}</span>
-                            </header>
-                            <div class="grille-stats">
-                                <div>
-                                    <small>Total attendu</small>
-                                    <strong>${data.analyse_sportive.total_attendu}</strong>
-                                </div>
-                                <div>
-                                    <small>Proba Modèle (Over)</small>
-                                    <strong>${(data.decision_financiere.p_over_modele * 100).toFixed(1)}%</strong>
-                                </div>
-                                <div>
-                                    <small>Valeur Espérée (EV)</small>
-                                    <strong>${(data.decision_financiere.ev_choisie * 100).toFixed(1)}%</strong>
-                                </div>
-                            </div>
-                        </article>
-                    `;
+                    // Version blindée sans accents graves
+                    let html = '<article class="carte-resultat">';
+                    
+                    html += '<header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
+                    html += '<h3 style="margin: 0;">' + data.match + '</h3>';
+                    html += '<span class="badge ' + badgeCss + '">' + decision + '</span>';
+                    html += '</header>';
+                    
+                    html += '<div class="grille-stats">';
+                    html += '<div><small>Total attendu</small><strong>' + data.analyse_sportive.total_attendu + '</strong></div>';
+                    html += '<div><small>Proba Modèle (Over)</small><strong>' + (data.probabilites_calibrees.p_over * 100).toFixed(1) + '%</strong></div>';
+                    html += '<div><small>Valeur Espérée (EV)</small><strong>' + (data.decision_financiere.ev_choisie * 100).toFixed(1) + '%</strong></div>';
+                    html += '</div>';
+
+                    html += '<div class="zone-cotes-justes">';
+                    html += '<span style="color: #10b981; font-weight: bold;">💡 Cotes Justes du Modèle :</span> ';
+                    html += 'Over à <strong>' + data.cotes_justes.cote_juste_over + '</strong> | ';
+                    html += 'Under à <strong>' + data.cotes_justes.cote_juste_under + '</strong>';
+                    html += '</div>';
+                    
+                    html += '</article>';
+                    
+                    divResultat.innerHTML = html;
                     divResultat.style.display = 'block';
+                    
                 } else {
                     alert("Erreur : " + data.detail);
                 }
@@ -172,4 +183,4 @@
         });
     </script>
 </body>
-    </html>
+                </html>
