@@ -63,11 +63,20 @@ def analyser(demande: MatchDemande):
 
         decision_financiere = prendre_decision(p_over_calibre, p_under_calibre, demande.cote_over, demande.cote_under)
 
+        # --- NOUVEAU : Calcul des cotes justes ---
+        # La cote juste, c'est 1 divisé par la probabilité (ex: 1 / 0.60 = 1.66)
+        cote_juste_over = 1 / p_over_calibre if p_over_calibre > 0 else 0
+        cote_juste_under = 1 / p_under_calibre if p_under_calibre > 0 else 0
+
         resultat_final = {
             "match": f"{stats_A['equipe']} vs {stats_B['equipe']}",
             "marche": demande.marche,
             "analyse_sportive": analyse_monte_carlo,
             "probabilites_calibrees": {"p_over": round(p_over_calibre, 4), "p_under": round(p_under_calibre, 4)},
+            "cotes_justes": {
+                "cote_juste_over": round(cote_juste_over, 2),
+                "cote_juste_under": round(cote_juste_under, 2)
+            },
             "decision_financiere": decision_financiere
         }
         sauvegarder_analyse(resultat_final)
