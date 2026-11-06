@@ -9,9 +9,9 @@
         body { padding: 20px; }
         .badge-parier { background-color: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
         .badge-refus { background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em;}
-        table { font-size: 0.9em; }
-        
-        /* C'est ici qu'on plie l'affiche pour le téléphone */
+        .btn-mini { padding: 2px 8px; font-size: 0.8em; margin-right: 4px; cursor: pointer; }
+        .btn-win { background-color: #10b981; color: white; border: none; border-radius: 4px; }
+        .btn-lose { background-color: #ef4444; color: white; border: none; border-radius: 4px; }
         @media (max-width: 600px) {
             th, td { padding: 4px; font-size: 0.8em; }
             .cache-telephone { display: none; } 
@@ -21,12 +21,8 @@
 <body>
     <main class="container">
         <nav style="margin-bottom: 20px;">
-            <ul>
-                <li><strong>📖 Historique</strong></li>
-            </ul>
-            <ul>
-                <li><a href="/" role="button" class="outline">⬅️ Retour</a></li>
-            </ul>
+            <ul><li><strong>📖 Historique</strong></li></ul>
+            <ul><li><a href="/" role="button" class="outline">⬅️ Retour</a></li></ul>
         </nav>
 
         <div style="overflow-x: auto;">
@@ -36,10 +32,8 @@
                         <th class="cache-telephone">Date</th>
                         <th>Match</th>
                         <th class="cache-telephone">Marché</th>
-                        <th>Ligne</th>
-                        <th>Total</th>
                         <th>Décision</th>
-                        <th>EV</th>
+                        <th>Score</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,8 +42,6 @@
                         <td class="cache-telephone">{{ pari.date_creation[:10] }}</td>
                         <td>{{ pari.match }}</td>
                         <td class="cache-telephone">{{ pari.marche }}</td>
-                        <td>{{ pari.ligne }}</td>
-                        <td>{{ pari.total_attendu }}</td>
                         <td>
                             {% if 'PARIER' in pari.decision %}
                                 <span class="badge-parier">{{ pari.decision }}</span>
@@ -57,16 +49,40 @@
                                 <span class="badge-refus">{{ pari.decision }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ (pari.ev * 100) | round(1) }}%</td>
+                        <td>
+                            {% if pari.resultat_reel == 1 %}
+                                <span style="color: #10b981; font-weight: bold;">Gagné ✅</span>
+                            {% elif pari.resultat_reel == 0 %}
+                                <span style="color: #ef4444; font-weight: bold;">Perdu ❌</span>
+                            {% else %}
+                                <button class="btn-mini btn-win" onclick="noterResultat({{ pari.id }}, 1)">Gagné</button>
+                                <button class="btn-mini btn-lose" onclick="noterResultat({{ pari.id }}, 0)">Perdu</button>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
-                    <tr>
-                        <td colspan="7" style="text-align: center;">Aucun pari pour le moment.</td>
-                    </tr>
+                    <tr><td colspan="5" style="text-align: center;">Aucun pari pour le moment.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </main>
+
+    <script>
+        async function noterResultat(id, resultat) {
+            if(!confirm("Confirmer le résultat ?")) return;
+            
+            try {
+                const reponse = await fetch(`/api/noter-resultat/${id}/${resultat}`, { method: 'POST' });
+                if(reponse.ok) {
+                    window.location.reload(); // Recharge la page pour voir le résultat
+                } else {
+                    alert("Erreur lors de la notation.");
+                }
+            } catch (e) {
+                alert("Erreur de connexion.");
+            }
+        }
+    </script>
 </body>
 </html>
