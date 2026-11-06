@@ -15,7 +15,7 @@ def analyser_match_simulation(stats_equipe_A, stats_equipe_B, marche, ligne, ava
     moyenne_A = stats_equipe_A[cle]
     moyenne_B = stats_equipe_B[cle]
 
-    # 3. L'avantage du terrain (On booste l'équipe à la maison, on pénalise un peu le voyageur)
+    # 3. L'avantage du terrain
     if avantage_terrain == "domicile_A":
         moyenne_A *= 1.03
         moyenne_B *= 0.98 
@@ -23,16 +23,32 @@ def analyser_match_simulation(stats_equipe_A, stats_equipe_B, marche, ligne, ava
         moyenne_A *= 0.98
         moyenne_B *= 1.03
 
-    # 4. LA FORMULE MAGIQUE (Loi de Poisson)
-    # Le robot simule 10 000 matchs pour l'équipe A, et 10 000 pour l'équipe B
-    simulations_A = np.random.poisson(lam=moyenne_A, size=n_simulations)
-    simulations_B = np.random.poisson(lam=moyenne_B, size=n_simulations)
+    # --- COUCHE 1 : LE RYTHME PARTAGÉ (LA CORRÉLATION) ---
+    # Le robot tire au sort l'intensité du match (1.0 = normal, 1.1 = match rapide, 0.9 = match lent)
+    # Une loi Normale avec 5% de variation
+    rythme_match = np.random.normal(loc=1.0, scale=0.05, size=n_simulations)
+    
+    # On applique ce rythme aux deux équipes (si le match est rapide, les deux en profitent)
+    moyennes_A_simulees = moyenne_A * rythme_match
+    moyennes_B_simulees = moyenne_B * rythme_match
 
-    # 5. On additionne les deux pour avoir le total du match
-    simulations_totales = simulations_A + simulations_B
+    # --- COUCHE 2 : LA SURDISPERSION (LOI BINOMIALE NÉGATIVE) ---
+    # On utilise la Binomiale Négative au lieu de Poisson.
+    # Le paramètre 'r' (taille) contrôle la "folie" du match. Plus r est petit, plus il y a de surprises.
+    r = 15  # Ajustable : r=15 donne une distribution réaliste pour la NBA
+    
+    # Simulation de l'équipe A (formule mathématique de la Binomiale Négative)
+    p_A = r / (r + moyennes_A_simulees)
+    sim_A = np.random.negative_binomial(r, p_A, size=n_simulations)
 
-    # 6. On calcule la moyenne de nos simulations et on compte les Over
+    # Simulation de l'équipe B
+    p_B = r / (r + moyennes_B_simulees)
+    sim_B = np.random.negative_binomial(r, p_B, size=n_simulations)
+
+    # --- COUCHE 3 : LE TOTAL ET LA PROBABILITÉ ---
+    simulations_totales = sim_A + sim_B
     moyenne_totale = np.mean(simulations_totales)
+    
     over_reussis = np.sum(simulations_totales > ligne)
     p_over = over_reussis / n_simulations
 
