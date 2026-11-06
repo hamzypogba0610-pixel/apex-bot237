@@ -7,7 +7,7 @@ from src.models.baseline import analyser_match_simulation
 from src.decision.edge import prendre_decision
 from src.decision.calibration import CalibrateurAPEX
 from src.database import (
-    sauvegarder_analyse, lire_historique, mettre_a_jour_resultat, 
+    sauvegarder_analyse, lire_historique, mettre_a_jour_resultat,
     recuperer_donnees_calibration, sauvegarder_parametres_calibration, charger_parametres_calibration
 )
 from src.backtest import lancer_backtest_saison
@@ -17,12 +17,11 @@ templates = Jinja2Templates(directory="templates")
 
 calibrateur = CalibrateurAPEX()
 
-# --- NOUVEAU : Au démarrage, on lit la mémoire ---
 @app.on_event("startup")
 def startup_event():
-    params = charger_parametres_calibration()
-    if params:
-        calibrateur.restaurer(params["param_a"], params["param_b"], params["param_m"])
+    objet_modele = charger_parametres_calibration()
+    if objet_modele:
+        calibrateur.restaurer_objet(objet_modele)
         print("Cerveau du robot rechargé avec succès depuis Supabase !")
     else:
         print("Aucun cerveau sauvegardé trouvé. Le robot est un nouveau-né.")
@@ -56,14 +55,14 @@ def analyser(demande: MatchDemande):
         stats_B = get_stats_equipe(demande.equipe_B)
         if not stats_A or not stats_B or "erreur" in stats_A or "erreur" in stats_B:
             raise HTTPException(status_code=404, detail="Équipe non trouvée.")
-        
+
         analyse_monte_carlo = analyser_match_simulation(stats_A, stats_B, demande.marche, demande.ligne, demande.avantage_terrain)
-        
+
         p_over_calibre = calibrateur.calibrer(analyse_monte_carlo["p_over_modele"])
         p_under_calibre = 1.0 - p_over_calibre
-        
+
         decision_financiere = prendre_decision(p_over_calibre, p_under_calibre, demande.cote_over, demande.cote_under)
-        
+
         resultat_final = {
             "match": f"{stats_A['equipe']} vs {stats_B['equipe']}",
             "marche": demande.marche,
@@ -89,9 +88,8 @@ def entrainer():
         return {"status": "info", "message": f"Pas assez de données ({len(probas)}/10)."}
     try:
         calibrateur.entrainer(probas, resultats)
-        # On sauvegarde le cerveau !
-        a, b, m = calibrateur.get_parametres()
-        sauvegarder_parametres_calibration(a, b, m)
+        objet = calibrateur.get_objet_modele()
+        sauvegarder_parametres_calibration(objet)
         return {"status": "success", "message": "Calibrateur entraîné et sauvegardé !"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -100,10 +98,9 @@ def entrainer():
 def backtest():
     try:
         resultat = lancer_backtest_saison(calibrateur)
-        # Si le backtest a réussi, on sauvegarde le cerveau !
         if resultat.get("status") == "success":
-            a, b, m = calibrateur.get_parametres()
-            sauvegarder_parametres_calibration(a, b, m)
+            objet = calibrateur.get_objet_modele()
+            sauvegarder_parametres_calibration(objet)
             resultat["message"] += " (Cerveau sauvegardé en base de données)"
         return resultat
     except Exception as e:
