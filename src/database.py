@@ -1,4 +1,6 @@
 import os
+import pickle
+import base64
 from supabase import create_client, Client
 
 url = os.environ.get("SUPABASE_URL")
@@ -63,27 +65,32 @@ def recuperer_donnees_calibration():
         print(f"Erreur de récupération : {e}")
         return [], []
 
-# NOUVEAU : Sauvegarder les paramètres du cerveau
-def sauvegarder_parametres_calibration(param_a, param_b, param_m):
+# NOUVEAU : Sauvegarder l'objet entier en base64
+def sauvegarder_parametres_calibration(objet_modele):
     supabase = get_supabase()
     if not supabase: return False
     try:
-        data = {"id": 1, "param_a": float(param_a), "param_b": float(param_b), "param_m": float(param_m)}
-        # Upsert (met à jour si existe, crée sinon)
+        # On transforme l'objet Python en texte (pickle) puis en texte lisible (base64)
+        objet_serialise = base64.b64encode(pickle.dumps(objet_modele)).decode('utf-8')
+        
+        data = {"id": 1, "parametres_serialises": objet_serialise}
         supabase.table("calibration_params").upsert(data).execute()
         return True
     except Exception as e:
         print(f"Erreur sauvegarde cerveau : {e}")
         return False
 
-# NOUVEAU : Charger les paramètres du cerveau
+# NOUVEAU : Charger l'objet entier
 def charger_parametres_calibration():
     supabase = get_supabase()
     if not supabase: return None
     try:
         reponse = supabase.table("calibration_params").select("*").eq("id", 1).execute()
-        if reponse.data:
-            return reponse.data[0]
+        if reponse.data and reponse.data[0].get("parametres_serialises"):
+            # On décode le texte pour retrouver l'objet Python
+            objet_serialise = reponse.data[0]["parametres_serialises"]
+            objet_modele = pickle.loads(base64.b64decode(objet_serialise.encode('utf-8')))
+            return objet_modele
         return None
     except Exception as e:
         print(f"Erreur chargement cerveau : {e}")
